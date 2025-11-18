@@ -6,7 +6,7 @@ import { PartnerDashboard } from './components/PartnerDashboard';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { analyzeProfile } from './services/geminiService';
 import { UserType, UserProfile, AIAnalysisResult } from './types';
-import { Briefcase, GraduationCap, Building2, CheckCircle, Globe, Plane, ShieldCheck } from 'lucide-react';
+import { Briefcase, GraduationCap, Building2, CheckCircle, Globe, Plane, ShieldCheck, Scale, UserCheck, BookOpen } from 'lucide-react';
 
 type ViewState = 'country-selection' | 'landing' | 'assessment' | 'user-dashboard' | 'partner-dashboard' | 'super-admin-dashboard';
 
@@ -53,6 +53,8 @@ const App: React.FC = () => {
   const handleAdminLoginRequest = (v: string) => {
     if (v === 'super-admin-login') {
        handleStart(UserType.SuperAdmin);
+    } else if (v === 'partner-login') {
+       handleStart(UserType.Partner);
     } else {
        setView(v as ViewState);
     }
@@ -130,10 +132,26 @@ const App: React.FC = () => {
             <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6">
               Your Dream to <span className="text-red-600">Canada</span> Starts Here.
             </h1>
-            <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
               The comprehensive lifecycle platform for students, skilled workers, and immigration consultants. 
               Get AI-powered assessment, clear pathways, and expert guidance.
             </p>
+
+            {/* Consultant Buttons */}
+            <div className="flex flex-wrap justify-center gap-4 mb-12">
+              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition shadow-sm">
+                <UserCheck size={18} />
+                Consult an IRCC Consultant
+              </button>
+              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm">
+                <Scale size={18} />
+                Consult an Immigration Lawyer
+              </button>
+              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition shadow-sm">
+                <BookOpen size={18} />
+                Consult an Education Consultant
+              </button>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* Student Card */}
@@ -217,13 +235,13 @@ const App: React.FC = () => {
               </div>
               <h3 className="text-2xl font-bold text-gray-900">Booking Confirmed!</h3>
               <p className="text-gray-500 mt-2">
-                A Regulated Canadian Immigration Consultant (RCIC) will contact you within 24 hours.
+                A Regulated Canadian Immigration Consultant (RCIC) or relevant expert will contact you within 24 hours.
               </p>
             </div>
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-gray-600">Service:</span>
-                <span className="font-medium text-gray-900">Initial Assessment Review</span>
+                <span className="font-medium text-gray-900">Initial Consultation</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Fee:</span>

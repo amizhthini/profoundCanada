@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, User, LogOut, Map, Shield } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Map, Shield, Briefcase } from 'lucide-react';
 import { UserType } from '../types';
 
 interface NavbarProps {
@@ -34,6 +34,12 @@ export const Navbar: React.FC<NavbarProps> = ({ userType, onLogout, onSwitchView
             </div>
           ) : (
             <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => onSwitchView('partner-login')}
+                    className="text-gray-600 hover:text-gray-900 font-medium text-sm px-3 py-2 flex items-center gap-1"
+                >
+                   <Briefcase size={16} /> Partner Login
+                </button>
                 {/* Hidden/Subtle Admin Login for Demo purposes */}
                 <button 
                     onClick={() => onSwitchView('super-admin-login')}
