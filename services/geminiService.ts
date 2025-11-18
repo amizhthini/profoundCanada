@@ -10,6 +10,68 @@ const getAIClient = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+const fileToGenerativePart = async (file: File) => {
+  const base64EncodedDataPromise = new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+    reader.readAsDataURL(file);
+  });
+  return {
+    inlineData: {
+      data: await base64EncodedDataPromise,
+      mimeType: file.type,
+    },
+  };
+};
+
+export const parseResume = async (file: File): Promise<Partial<UserProfile>> => {
+  const ai = getAIClient();
+
+  try {
+    const filePart = await fileToGenerativePart(file);
+
+    const prompt = `
+      You are an intelligent resume parser. Extract the following details from the resume provided:
+      1. Full Name
+      2. Highest Education Level (Map strictly to one of: 'High School', 'Diploma', 'Bachelor', 'Master', 'PhD')
+      3. Field of Study (e.g. Computer Science, Business Admin)
+      4. Total Work Experience in Years (numeric value)
+      5. English Score (only if explicitly stated like IELTS/CELPIP, otherwise return 0)
+
+      Return the data in JSON format.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: {
+        parts: [filePart, { text: prompt }]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            educationLevel: { type: Type.STRING, enum: ["High School", "Diploma", "Bachelor", "Master", "PhD"] },
+            fieldOfStudy: { type: Type.STRING },
+            workExperienceYears: { type: Type.NUMBER },
+            englishScore: { type: Type.NUMBER },
+          },
+          required: ["name", "educationLevel", "fieldOfStudy", "workExperienceYears"],
+        },
+      },
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text) as Partial<UserProfile>;
+    }
+    return {};
+  } catch (error) {
+    console.error("Error parsing resume:", error);
+    return {};
+  }
+};
+
 export const analyzeProfile = async (
   profile: UserProfile,
   userType: UserType

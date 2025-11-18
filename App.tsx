@@ -3,11 +3,12 @@ import { Navbar } from './components/Navbar';
 import { AssessmentForm } from './components/AssessmentForm';
 import { UserDashboard } from './components/UserDashboard';
 import { PartnerDashboard } from './components/PartnerDashboard';
+import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { analyzeProfile } from './services/geminiService';
 import { UserType, UserProfile, AIAnalysisResult } from './types';
-import { Briefcase, GraduationCap, Building2, CheckCircle, Globe } from 'lucide-react';
+import { Briefcase, GraduationCap, Building2, CheckCircle, Globe, Plane, ShieldCheck } from 'lucide-react';
 
-type ViewState = 'country-selection' | 'landing' | 'assessment' | 'user-dashboard' | 'partner-dashboard';
+type ViewState = 'country-selection' | 'landing' | 'assessment' | 'user-dashboard' | 'partner-dashboard' | 'super-admin-dashboard';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('country-selection');
@@ -20,6 +21,8 @@ const App: React.FC = () => {
     setUserType(type);
     if (type === UserType.Partner) {
       setView('partner-dashboard');
+    } else if (type === UserType.SuperAdmin) {
+      setView('super-admin-dashboard');
     } else {
       setView('assessment');
     }
@@ -46,6 +49,15 @@ const App: React.FC = () => {
     setView('country-selection');
   };
 
+  // Special handler for the hidden admin button in navbar
+  const handleAdminLoginRequest = (v: string) => {
+    if (v === 'super-admin-login') {
+       handleStart(UserType.SuperAdmin);
+    } else {
+       setView(v as ViewState);
+    }
+  }
+
   const toggleModal = () => setShowModal(!showModal);
 
   const countries = [
@@ -58,7 +70,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
-      <Navbar userType={userType} onLogout={handleLogout} onSwitchView={() => setView('country-selection')} />
+      <Navbar userType={userType} onLogout={handleLogout} onSwitchView={handleAdminLoginRequest} />
 
       <div className="px-4 pb-12">
         {view === 'country-selection' && (
@@ -108,7 +120,7 @@ const App: React.FC = () => {
         )}
 
         {view === 'landing' && (
-          <div className="max-w-6xl mx-auto text-center animate-fade-in mt-10">
+          <div className="max-w-7xl mx-auto text-center animate-fade-in mt-10">
             <button 
               onClick={() => setView('country-selection')} 
               className="mb-8 text-gray-500 hover:text-red-600 flex items-center justify-center gap-2 mx-auto transition font-medium"
@@ -123,7 +135,7 @@ const App: React.FC = () => {
               Get AI-powered assessment, clear pathways, and expert guidance.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
               {/* Student Card */}
               <div 
                 onClick={() => handleStart(UserType.Student)}
@@ -146,6 +158,18 @@ const App: React.FC = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">I am a Skilled Worker</h3>
                 <p className="text-gray-500">Check Express Entry eligibility, CRS score, and PNP options.</p>
+              </div>
+
+              {/* Direct PR Card */}
+              <div 
+                onClick={() => handleStart(UserType.Worker)}
+                className="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-red-300 transition cursor-pointer group"
+              >
+                <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-teal-100">
+                  <Plane className="w-8 h-8 text-teal-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Direct PR to Canada</h3>
+                <p className="text-gray-500">Explore my options for Permanent Residency.</p>
               </div>
 
               {/* Partner Card */}
@@ -173,6 +197,10 @@ const App: React.FC = () => {
 
         {view === 'partner-dashboard' && (
           <PartnerDashboard />
+        )}
+
+        {view === 'super-admin-dashboard' && (
+          <SuperAdminDashboard />
         )}
       </div>
 

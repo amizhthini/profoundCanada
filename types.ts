@@ -1,7 +1,8 @@
 export enum UserType {
   Student = 'Student',
   Worker = 'Worker',
-  Partner = 'Partner' // Consultant/Agency
+  Partner = 'Partner', // Consultant/Agency
+  SuperAdmin = 'SuperAdmin' // Platform Owner
 }
 
 export interface UserProfile {
@@ -46,4 +47,15 @@ export interface Lead {
   score: number;
   type: UserType;
   lastActive: string;
+}
+
+export interface PartnerOrganization {
+  id: string;
+  agencyName: string;
+  contactPerson: string;
+  email: string;
+  subscriptionPlan: 'Basic' | 'Pro' | 'Enterprise';
+  status: 'Active' | 'Pending' | 'Suspended';
+  clientCount: number;
+  revenueGenerated: number;
 }

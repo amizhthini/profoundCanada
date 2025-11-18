@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserProfile, UserType } from '../types';
-import { Loader2, ArrowRight, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowRight, CheckCircle, Upload, FileText } from 'lucide-react';
+import { parseResume } from '../services/geminiService';
 
 interface AssessmentFormProps {
   userType: UserType;
@@ -10,6 +11,9 @@ interface AssessmentFormProps {
 
 export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubmit, isLoading }) => {
   const [step, setStep] = useState(1);
+  const [isParsing, setIsParsing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [formData, setFormData] = useState<UserProfile>({
     name: '',
     age: 25,
@@ -28,6 +32,31 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : type === 'number' ? Number(value) : value,
     }));
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    try {
+      const extractedData = await parseResume(file);
+      setFormData((prev) => ({
+        ...prev,
+        name: extractedData.name || prev.name,
+        educationLevel: extractedData.educationLevel || prev.educationLevel,
+        fieldOfStudy: extractedData.fieldOfStudy || prev.fieldOfStudy,
+        workExperienceYears: extractedData.workExperienceYears !== undefined ? extractedData.workExperienceYears : prev.workExperienceYears,
+        englishScore: (extractedData.englishScore && extractedData.englishScore > 0) ? extractedData.englishScore : prev.englishScore,
+      }));
+    } catch (error) {
+      console.error("Resume parse error", error);
+      alert("Failed to parse resume. Please fill details manually.");
+    } finally {
+      setIsParsing(false);
+      // Clear input so same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const nextStep = () => setStep(step + 1);
@@ -60,6 +89,46 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
       <div className="p-8">
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
+            
+            {/* Resume Upload Section */}
+            <div className="bg-red-50 border border-red-100 rounded-xl p-6 mb-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="bg-white p-3 rounded-lg shadow-sm">
+                    <FileText className="text-red-600" size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-red-900">Auto-fill with Resume</h3>
+                    <p className="text-sm text-red-700 mt-1">Upload your resume (PDF) to automatically populate your details.</p>
+                  </div>
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".pdf"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isParsing}
+                    className="bg-white text-red-600 hover:bg-red-50 border border-red-200 font-medium py-2 px-6 rounded-lg shadow-sm transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isParsing ? (
+                      <>
+                        <Loader2 className="animate-spin" size={18} /> Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={18} /> Upload Resume
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <h3 className="text-xl font-bold text-gray-900">Basic Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

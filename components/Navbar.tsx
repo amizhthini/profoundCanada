@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, User, LogOut, Map } from 'lucide-react';
+import { LayoutDashboard, User, LogOut, Map, Shield } from 'lucide-react';
 import { UserType } from '../types';
 
 interface NavbarProps {
@@ -22,7 +22,7 @@ export const Navbar: React.FC<NavbarProps> = ({ userType, onLogout, onSwitchView
           {userType ? (
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600 hidden md:block">
-                Logged in as <span className="font-semibold">{userType}</span>
+                Logged in as <span className="font-semibold text-red-600">{userType === 'SuperAdmin' ? 'Super Admin' : userType}</span>
               </span>
               <button
                 onClick={onLogout}
@@ -33,12 +33,21 @@ export const Navbar: React.FC<NavbarProps> = ({ userType, onLogout, onSwitchView
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              className="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2 text-center"
-            >
-              Get Started
-            </button>
+            <div className="flex items-center gap-2">
+                {/* Hidden/Subtle Admin Login for Demo purposes */}
+                <button 
+                    onClick={() => onSwitchView('super-admin-login')}
+                    className="text-gray-400 hover:text-gray-600 font-medium text-sm px-3 py-2"
+                >
+                   Admin
+                </button>
+                <button
+                type="button"
+                className="text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2 text-center"
+                >
+                Get Started
+                </button>
+            </div>
           )}
         </div>
       </div>
