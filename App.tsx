@@ -16,8 +16,7 @@ const App: React.FC = () => {
   const [userType, setUserType] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<AIAnalysisResult | null>(null);
-  const [showModal, setShowModal] = useState(false);
-
+  
   // We need to store the user's profile data to pass it to the dashboard
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null);
 
@@ -65,8 +64,6 @@ const App: React.FC = () => {
        setView(v as ViewState);
     }
   }
-
-  const toggleModal = () => setShowModal(!showModal);
 
   const countries = [
     { name: 'Canada', flag: '🇨🇦', description: 'Express Entry, PNP, & Study Pathways', active: true },
@@ -143,17 +140,17 @@ const App: React.FC = () => {
               Get AI-powered assessment, clear pathways, and expert guidance.
             </p>
 
-            {/* Consultant Buttons */}
+            {/* Consultant Buttons - Visual Only on Landing, Functional in Dashboard */}
             <div className="flex flex-wrap justify-center gap-4 mb-12">
-              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition shadow-sm">
+              <button className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition shadow-sm cursor-default">
                 <UserCheck size={18} />
                 Consult an IRCC Consultant
               </button>
-              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm">
+              <button className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition shadow-sm cursor-default">
                 <Scale size={18} />
                 Consult an Immigration Lawyer
               </button>
-              <button onClick={toggleModal} className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition shadow-sm">
+              <button className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-5 py-3 rounded-full font-medium hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition shadow-sm cursor-default">
                 <BookOpen size={18} />
                 Consult an Education Consultant
               </button>
@@ -218,7 +215,6 @@ const App: React.FC = () => {
         {view === 'user-dashboard' && assessmentResult && currentProfile && (
           <UserDashboard 
             results={assessmentResult} 
-            onBookConsultation={toggleModal} 
             userProfile={currentProfile} 
           />
         )}
@@ -231,42 +227,6 @@ const App: React.FC = () => {
           <SuperAdminDashboard />
         )}
       </div>
-
-      {/* Booking Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
-            <button onClick={toggleModal} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-              <span className="text-2xl">&times;</span>
-            </button>
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="text-green-600" size={24} />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900">Booking Confirmed!</h3>
-              <p className="text-gray-500 mt-2">
-                A Regulated Canadian Immigration Consultant (RCIC) or relevant expert will contact you within 24 hours.
-              </p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600">Service:</span>
-                <span className="font-medium text-gray-900">Initial Consultation</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Fee:</span>
-                <span className="font-medium text-gray-900">$50.00 CAD</span>
-              </div>
-            </div>
-            <button 
-              onClick={toggleModal}
-              className="w-full bg-gray-900 text-white font-medium py-3 rounded-lg hover:bg-gray-800 transition"
-            >
-              Return to Dashboard
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

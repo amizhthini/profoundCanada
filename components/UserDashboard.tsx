@@ -4,15 +4,16 @@ import { AIAnalysisResult, UserProfile } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { Check, AlertTriangle, GraduationCap, TrendingUp, List, CheckCircle2, XCircle, ArrowRight, Sparkles, ArrowRightCircle, Info, Calendar, ChevronRight } from 'lucide-react';
 import { StudyAdvisingModal } from './StudyAdvisingModal';
+import { ConsultantBookingModal } from './ConsultantBookingModal';
 
 interface UserDashboardProps {
   results: AIAnalysisResult;
-  onBookConsultation: () => void;
-  userProfile: UserProfile; // Added prop
+  userProfile: UserProfile;
 }
 
-export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookConsultation, userProfile }) => {
+export const UserDashboard: React.FC<UserDashboardProps> = ({ results, userProfile }) => {
   const [showStudyModal, setShowStudyModal] = useState(false);
+  const [showConsultantModal, setShowConsultantModal] = useState(false);
 
   const scoreData = [
     { name: 'Success', value: results.overallSuccessProbability },
@@ -51,6 +52,12 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
       <StudyAdvisingModal 
         isOpen={showStudyModal} 
         onClose={() => setShowStudyModal(false)} 
+        userProfile={userProfile}
+      />
+      
+      <ConsultantBookingModal
+        isOpen={showConsultantModal}
+        onClose={() => setShowConsultantModal(false)}
         userProfile={userProfile}
       />
 
@@ -103,17 +110,34 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
               </div>
 
              {/* 2. Need Professional Help? (CTA) */}
-             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200 flex flex-col justify-center">
-                <h3 className="font-bold text-red-900 mb-2 text-lg">Need Professional Help?</h3>
-                <p className="text-sm text-red-800 mb-6 flex-grow">
-                  Your profile has potential, but there are complexities. A Regulated Consultant (RCIC) can maximize your chances.
-                </p>
-                <button 
-                  onClick={onBookConsultation}
-                  className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg transition shadow-sm"
-                >
-                  Book Consultation ($50)
-                </button>
+             <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200 flex flex-col gap-4">
+                <h3 className="font-bold text-red-900 text-lg">Need Professional Help?</h3>
+                
+                {/* Option 1: Free Study Advice */}
+                <div className="bg-white/60 p-3 rounded-lg border border-red-100">
+                    <p className="text-sm text-red-900 font-bold mb-1">
+                        Free consultation to choose your course & college?
+                    </p>
+                    <button 
+                      onClick={() => setShowStudyModal(true)}
+                      className="w-full bg-white text-red-600 border border-red-200 hover:bg-red-50 font-bold py-2 rounded-lg transition text-xs flex items-center justify-center gap-1"
+                    >
+                      Book Free Appointment <ChevronRight size={14}/>
+                    </button>
+                </div>
+
+                {/* Option 2: Paid Consultant */}
+                <div className="flex flex-col h-full">
+                    <p className="text-xs text-red-800 mb-3 italic leading-relaxed">
+                        "Already have an offer letter? Your profile has potential, but there are complexities. A Regulated Consultant (RCIC) can maximize your chances."
+                    </p>
+                    <button 
+                      onClick={() => setShowConsultantModal(true)}
+                      className="w-full mt-auto bg-red-600 hover:bg-red-700 text-white font-medium py-2 rounded-lg transition shadow-sm text-sm"
+                    >
+                      Book IRCC Consultant
+                    </button>
+                </div>
               </div>
 
               {/* 3. CRS Score Projection */}
