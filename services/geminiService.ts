@@ -80,14 +80,38 @@ export const analyzeProfile = async (
 
   const systemPrompt = `
     You are an expert Canadian Immigration Consultant AI. 
-    Analyze the provided user profile and determine their eligibility for various Canadian immigration pathways (Express Entry, PNP, Study Permit, Atlantic Immigration Program, Start-up Visa, etc.).
     
-    1. Identify the "Recommended Pathways" (top 1-2 choices).
-    2. Identify "Other Pathways" that were evaluated but might have lower scores or are alternatives.
+    REFERENCE "MASTER CHEAT SHEET 2025":
+    1. Federal Express Entry:
+       - Canadian Experience Class (CEC): Requires 1yr Canadian work exp.
+       - Federal Skilled Worker (FSWP): 67 pts grid, 1yr continuous skilled work.
+       - Federal Skilled Trades (FSTP).
+       - Category-Based: STEM, Healthcare, Trades, French-Speaking, Transport, Agri-Food.
+    2. Federal Pilots/Business:
+       - Atlantic Immigration Program (AIP).
+       - Rural & Northern Immigration Pilot (RNIP).
+       - Start-Up Visa (SUV).
+       - Self-Employed (Cultural/Athletics).
+       - Agri-Food Pilot.
+       - Caregiver Programs.
+    3. Provincial Nominee Programs (PNP) - Key Streams:
+       - Alberta (AAIP): Accelerated Tech Pathway, Dedicated Health Care, Opportunity Stream, Rural Renewal.
+       - BC (BC PNP): Skills Immigration (Skilled Worker, Health Authority), Tech, International Graduate.
+       - Ontario (OINP): Human Capital Priorities (Tech/Health), Employer Job Offer, Masters/PhD Graduate, French-Speaking.
+       - Saskatchewan (SINP): International Skilled Worker, Experience.
+       - Manitoba (MPNP): Skilled Worker in Manitoba/Overseas.
+       - Atlantic Provinces (NS, NB, PEI, NL): Skilled Worker streams.
+
+    TASK:
+    Analyze the user profile against ALL the above pathways.
     
-    Be realistic but encouraging. 
-    If the user is a Student, focus on Study Permit approval odds and PGWP pathways.
-    If the user is a Worker, focus on Express Entry CRS scores and PNP eligibility.
+    OUTPUT REQUIREMENTS:
+    1. "recommendedPathways": Strictly the TOP 3 most viable pathways where the user has a high chance (High Eligibility + Competitive Score).
+    2. "otherPathways": A comprehensive list of AT LEAST 10 other pathways from the Cheat Sheet. Include both eligible (but less competitive) and ineligible pathways (to show they were evaluated).
+    3. "eligibilityScore": 0-100. 
+       - >80: Highly Competitive.
+       - 60-79: Eligible but waiting for draw/pool.
+       - <60: Low chance / Ineligible.
   `;
 
   const userPrompt = `
@@ -193,35 +217,91 @@ export const analyzeProfile = async (
     // Fallback mock data for demo stability if API fails or key is invalid
     return {
       overallSuccessProbability: 65,
-      crsScorePrediction: 430,
-      riskFactors: ["Funds are on the lower side", "Age might reduce points slightly"],
-      strengths: ["High English Score", "Strong Education Background"],
+      crsScorePrediction: 445,
+      riskFactors: ["CRS score is below recent general cutoffs (~500+)", "Lack of Canadian work experience"],
+      strengths: ["Strong English Proficiency (CLB 9+)", "Master's Degree aids points"],
       recommendedPathways: [
         {
-          name: "Express Entry - FSW",
-          description: "Federal Skilled Worker Program",
-          eligibilityScore: 70,
-          timeline: "6-8 Months",
+          name: "OINP Human Capital Priorities",
+          description: "Targeted draws for Tech/Health occupations. Your profile aligns well with recent Ontario interest.",
+          eligibilityScore: 85,
+          timeline: "9-12 Months",
+          type: "Provincial",
+        },
+        {
+          name: "Express Entry - STEM Category",
+          description: "Category-based draws have lower CRS cutoffs (approx 480-490).",
+          eligibilityScore: 78,
+          timeline: "6 Months",
           type: "Federal",
         },
+        {
+          name: "BC PNP Tech",
+          description: "If you secure a job offer, this is a priority processing stream.",
+          eligibilityScore: 72,
+          timeline: "8-10 Months",
+          type: "Provincial",
+        }
       ],
       otherPathways: [
         {
-            name: "Atlantic Immigration Program",
-            description: "Employer-driven program for Atlantic Canada.",
+            name: "Federal Skilled Worker (General)",
+            description: "Eligible, but CRS 445 is likely too low for general draws.",
+            eligibilityScore: 60,
+            timeline: "6-8 Months",
+            type: "Federal"
+        },
+        {
+            name: "Canadian Experience Class (CEC)",
+            description: "Not eligible yet. Requires 1 year of Canadian work experience.",
+            eligibilityScore: 0,
+            timeline: "N/A",
+            type: "Federal"
+        },
+        {
+            name: "Alberta Accelerated Tech Pathway",
+            description: "Requires a job offer from an Alberta tech employer.",
             eligibilityScore: 45,
+            timeline: "6-12 Months",
+            type: "Provincial"
+        },
+        {
+            name: "Atlantic Immigration Program (AIP)",
+            description: "Requires a designated employer in Atlantic Canada.",
+            eligibilityScore: 40,
             timeline: "12 Months",
             type: "Provincial"
         },
         {
+            name: "OINP Masters Graduate Stream",
+            description: "Requires graduating from an Ontario university. Not eligible currently.",
+            eligibilityScore: 0,
+            timeline: "N/A",
+            type: "Provincial"
+        },
+        {
+            name: "Saskatchewan ISW - Occupation In-Demand",
+            description: "Competitive if your NOC is on their specific list.",
+            eligibilityScore: 65,
+            timeline: "12-15 Months",
+            type: "Provincial"
+        },
+        {
             name: "Start-up Visa Program",
-            description: "For entrepreneurs with a qualifying business idea.",
-            eligibilityScore: 20,
+            description: "Requires designated organization support and innovative business.",
+            eligibilityScore: 10,
             timeline: "12-16 Months",
             type: "Business"
+        },
+        {
+             name: "Manitoba Skilled Worker Overseas",
+             description: "Requires connection to Manitoba (friend/family/education).",
+             eligibilityScore: 30,
+             timeline: "12+ Months",
+             type: "Provincial"
         }
       ],
-      strategicAdvice: "Consider improving your CRS score by learning French or gaining more work experience.",
+      strategicAdvice: "Your CRS score of 445 is competitive for Provincial Nominee Programs (PNPs) but low for general Federal draws. Focus on OINP Human Capital stream or secure a job offer to unlock BC PNP or direct points.",
       studyRecommendations: [],
     };
   }
