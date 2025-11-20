@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { UserProfile, AIAnalysisResult, UserType } from "../types";
 
@@ -31,12 +32,15 @@ export const parseResume = async (file: File): Promise<Partial<UserProfile>> => 
     const filePart = await fileToGenerativePart(file);
 
     const prompt = `
-      You are an intelligent resume parser. Extract the following details from the resume provided:
-      1. Full Name
-      2. Highest Education Level (Map strictly to one of: 'High School', 'Diploma', 'Bachelor', 'Master', 'PhD')
-      3. Field of Study (e.g. Computer Science, Business Admin)
-      4. Total Work Experience in Years (numeric value)
-      5. English Score (only if explicitly stated like IELTS/CELPIP, otherwise return 0)
+      You are an intelligent resume parser for an immigration platform. Extract the following details from the resume provided.
+      
+      Rules:
+      1. **Full Name**: Extract the candidate's name.
+      2. **Country**: Extract the current Country of Residence. If not explicitly stated, infer it from the address or phone number country code. If unknown, return null.
+      3. **Education**: Map the highest degree strictly to one of: 'High School', 'Diploma', 'Bachelor', 'Master', 'PhD'.
+      4. **Field**: The major or field of study (e.g., 'Computer Science', 'Nursing').
+      5. **Experience**: Calculate total years of professional work experience.
+      6. **English**: If IELTS/CELPIP scores are present, extract the overall band score.
 
       Return the data in JSON format.
     `;
@@ -52,6 +56,7 @@ export const parseResume = async (file: File): Promise<Partial<UserProfile>> => 
           type: Type.OBJECT,
           properties: {
             name: { type: Type.STRING },
+            country: { type: Type.STRING, description: "Current country of residence" },
             educationLevel: { type: Type.STRING, enum: ["High School", "Diploma", "Bachelor", "Master", "PhD"] },
             fieldOfStudy: { type: Type.STRING },
             workExperienceYears: { type: Type.NUMBER },
@@ -63,7 +68,16 @@ export const parseResume = async (file: File): Promise<Partial<UserProfile>> => 
     });
 
     if (response.text) {
-      return JSON.parse(response.text) as Partial<UserProfile>;
+      const data = JSON.parse(response.text);
+      // Map the 'country' field from AI to 'countryOfResidence' in UserProfile
+      return {
+          name: data.name,
+          countryOfResidence: data.country || undefined,
+          educationLevel: data.educationLevel,
+          fieldOfStudy: data.fieldOfStudy,
+          workExperienceYears: data.workExperienceYears,
+          englishScore: data.englishScore
+      } as Partial<UserProfile>;
     }
     return {};
   } catch (error) {
@@ -78,58 +92,75 @@ export const analyzeProfile = async (
 ): Promise<AIAnalysisResult> => {
   const ai = getAIClient();
 
-  const systemPrompt = `
-    You are an expert Canadian Immigration Consultant AI. 
-    
-    REFERENCE "MASTER CHEAT SHEET 2025":
-    1. Federal Express Entry:
-       - Canadian Experience Class (CEC): Requires 1yr Canadian work exp.
-       - Federal Skilled Worker (FSWP): 67 pts grid, 1yr continuous skilled work.
-       - Federal Skilled Trades (FSTP).
-       - Category-Based: STEM, Healthcare, Trades, French-Speaking, Transport, Agri-Food.
-    2. Federal Pilots/Business:
-       - Atlantic Immigration Program (AIP).
-       - Rural & Northern Immigration Pilot (RNIP).
-       - Start-Up Visa (SUV).
-       - Self-Employed (Cultural/Athletics).
-       - Agri-Food Pilot.
-       - Caregiver Programs.
-    3. Provincial Nominee Programs (PNP) - Key Streams:
-       - Alberta (AAIP): Accelerated Tech Pathway, Dedicated Health Care, Opportunity Stream, Rural Renewal.
-       - BC (BC PNP): Skills Immigration (Skilled Worker, Health Authority), Tech, International Graduate.
-       - Ontario (OINP): Human Capital Priorities (Tech/Health), Employer Job Offer, Masters/PhD Graduate, French-Speaking.
-       - Saskatchewan (SINP): International Skilled Worker, Experience.
-       - Manitoba (MPNP): Skilled Worker in Manitoba/Overseas.
-       - Atlantic Provinces (NS, NB, PEI, NL): Skilled Worker streams.
+  // --- PROMPT LOGIC ---
+  // We split logic based on UserType to give specific "Student" vs "Worker" advice
+  
+  let specificInstructions = "";
+  
+  if (userType === UserType.Student) {
+      specificInstructions = `
+      CONTEXT: USER IS A PROSPECTIVE INTERNATIONAL STUDENT.
+      1. Analyze Visa Approval Probability based on:
+         - Financials (Savings vs Tuition/Living expenses).
+         - Study Gap (Age vs Education Level).
+         - Dual Intent (Genuine Student Check).
+         - Country of Residence (High vs Low risk visa offices).
+      2. SIMULATE "ApplyBoard" API Course Matching:
+         - Recommend 3-4 real Canadian DLI (Designated Learning Institutions) programs.
+         - Match based on 'intendedStudyField', 'educationLevel', and 'grades'.
+         - If user has Bachelor's, suggest Post-Grad or Master's.
+         - If user has High School, suggest Diploma or Bachelor's.
+      `;
+  } else {
+      specificInstructions = `
+      CONTEXT: USER IS A SKILLED WORKER SEEKING PR.
+      REFERENCE "MASTER CHEAT SHEET 2025":
+        1. Federal Express Entry (CEC, FSWP, FSTP, Category-Based).
+        2. PNP Streams (OINP, BC PNP, AAIP, SINP, MPNP, Atlantic).
+        3. Pilots (Agri-Food, RNIP, Caregiver).
+      Strictly return the top 3 recommended pathways and a list of other pathways evaluated.
+      `;
+  }
 
-    TASK:
-    Analyze the user profile against ALL the above pathways.
-    
-    OUTPUT REQUIREMENTS:
-    1. "recommendedPathways": Strictly the TOP 3 most viable pathways where the user has a high chance (High Eligibility + Competitive Score).
-    2. "otherPathways": A comprehensive list of AT LEAST 10 other pathways from the Cheat Sheet. Include both eligible (but less competitive) and ineligible pathways (to show they were evaluated).
-    3. "eligibilityScore": 0-100. 
-       - >80: Highly Competitive.
-       - 60-79: Eligible but waiting for draw/pool.
-       - <60: Low chance / Ineligible.
-  `;
+  // Constructing detailed prompt
+  let languageInfo = "N/A";
+  if (profile.languageDetails) {
+      const { testType, reading, writing, listening, speaking } = profile.languageDetails;
+      languageInfo = `${testType} - R:${reading}, W:${writing}, L:${listening}, S:${speaking}`;
+  }
 
-  const userPrompt = `
+  const commonPrompt = `
     Profile Details:
-    - Type: ${userType}
+    - Name: ${profile.name}
     - Age: ${profile.age}
-    - Education: ${profile.educationLevel} in ${profile.fieldOfStudy}
+    - Country: ${profile.countryOfResidence}
+    - Marital Status: ${profile.maritalStatus}
+    - Education: ${profile.educationLevel} (Canadian Degree: ${profile.hasCanadianEducation})
+    - Current Field: ${profile.fieldOfStudy}
+    - Intended Study Field: ${profile.intendedStudyField}
+    - Grades/GPA: ${profile.gradesOrGpa || "Not provided"}
     - Work Experience: ${profile.workExperienceYears} years
-    - English Score (IELTS band approx): ${profile.englishScore}
-    - Target Province: ${profile.targetProvince}
+    - Language Results: ${languageInfo}
     - Savings: $${profile.savings} CAD
-    - Job Offer: ${profile.hasJobOffer ? "Yes" : "No"}
+    - Visa History: ${profile.hasVisaHistory ? "Previous Travel to Canada" : "None"}
+    - Refusals/Criminal/Medical Issues: ${profile.hasRefusalHistory || profile.hasCriminalRecord || profile.hasMedicalCondition ? "YES (Risk Factor)" : "None"}
+    - Preferred Provinces: ${profile.preferredProvinces?.join(', ')}
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `${systemPrompt}\n\n${userPrompt}`,
+      contents: `
+        You are an expert Canadian Immigration and Education Consultant AI.
+        ${specificInstructions}
+        
+        ${commonPrompt}
+
+        OUTPUT REQUIREMENTS:
+        Return JSON matching the schema.
+        For Students: 'recommendedPathways' should be generic visa pathways (e.g. "Study Permit (SDS)", "Study Permit (General)"), and 'studyRecommendations' must be populated.
+        For Workers: 'studyRecommendations' can be empty.
+      `,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -137,21 +168,19 @@ export const analyzeProfile = async (
           properties: {
             overallSuccessProbability: {
               type: Type.NUMBER,
-              description: "A score from 0 to 100 indicating likelihood of successful immigration/visa.",
+              description: "0-100 score indicating likelihood of Visa/PR approval.",
             },
             crsScorePrediction: {
               type: Type.NUMBER,
-              description: "Estimated CRS score based on current profile.",
+              description: "Estimated CRS score (if applicable, else 0).",
             },
             riskFactors: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "List of potential reasons for rejection or low scores.",
             },
             strengths: {
               type: Type.ARRAY,
               items: { type: Type.STRING },
-              description: "List of strong points in the profile.",
             },
             recommendedPathways: {
               type: Type.ARRAY,
@@ -181,7 +210,6 @@ export const analyzeProfile = async (
             },
             strategicAdvice: {
               type: Type.STRING,
-              description: "A paragraph of advice on how to improve chances.",
             },
             studyRecommendations: {
               type: Type.ARRAY,
@@ -190,6 +218,8 @@ export const analyzeProfile = async (
                 properties: {
                   programName: { type: Type.STRING },
                   institution: { type: Type.STRING },
+                  location: { type: Type.STRING },
+                  tuition: { type: Type.STRING },
                   matchReason: { type: Type.STRING },
                 },
               },
@@ -214,95 +244,32 @@ export const analyzeProfile = async (
     throw new Error("No response from AI");
   } catch (error) {
     console.error("Error analyzing profile:", error);
-    // Fallback mock data for demo stability if API fails or key is invalid
+    // Fallback mock data
     return {
-      overallSuccessProbability: 65,
-      crsScorePrediction: 445,
-      riskFactors: ["CRS score is below recent general cutoffs (~500+)", "Lack of Canadian work experience"],
-      strengths: ["Strong English Proficiency (CLB 9+)", "Master's Degree aids points"],
+      overallSuccessProbability: 75,
+      crsScorePrediction: 0,
+      riskFactors: ["Study gap of >3 years", "High competition for this program"],
+      strengths: ["Sufficient financial funds", "Good language score"],
       recommendedPathways: [
         {
-          name: "OINP Human Capital Priorities",
-          description: "Targeted draws for Tech/Health occupations. Your profile aligns well with recent Ontario interest.",
-          eligibilityScore: 85,
-          timeline: "9-12 Months",
-          type: "Provincial",
-        },
-        {
-          name: "Express Entry - STEM Category",
-          description: "Category-based draws have lower CRS cutoffs (approx 480-490).",
-          eligibilityScore: 78,
-          timeline: "6 Months",
-          type: "Federal",
-        },
-        {
-          name: "BC PNP Tech",
-          description: "If you secure a job offer, this is a priority processing stream.",
-          eligibilityScore: 72,
-          timeline: "8-10 Months",
-          type: "Provincial",
+          name: "Study Permit (SDS Stream)",
+          description: "Fast-track processing for residents of specific countries with IELTS 6.0+.",
+          eligibilityScore: 90,
+          timeline: "20 Days",
+          type: "Study",
         }
       ],
-      otherPathways: [
+      otherPathways: [],
+      strategicAdvice: "Focus on writing a strong Statement of Purpose (SOP) explaining the study gap.",
+      studyRecommendations: [
         {
-            name: "Federal Skilled Worker (General)",
-            description: "Eligible, but CRS 445 is likely too low for general draws.",
-            eligibilityScore: 60,
-            timeline: "6-8 Months",
-            type: "Federal"
-        },
-        {
-            name: "Canadian Experience Class (CEC)",
-            description: "Not eligible yet. Requires 1 year of Canadian work experience.",
-            eligibilityScore: 0,
-            timeline: "N/A",
-            type: "Federal"
-        },
-        {
-            name: "Alberta Accelerated Tech Pathway",
-            description: "Requires a job offer from an Alberta tech employer.",
-            eligibilityScore: 45,
-            timeline: "6-12 Months",
-            type: "Provincial"
-        },
-        {
-            name: "Atlantic Immigration Program (AIP)",
-            description: "Requires a designated employer in Atlantic Canada.",
-            eligibilityScore: 40,
-            timeline: "12 Months",
-            type: "Provincial"
-        },
-        {
-            name: "OINP Masters Graduate Stream",
-            description: "Requires graduating from an Ontario university. Not eligible currently.",
-            eligibilityScore: 0,
-            timeline: "N/A",
-            type: "Provincial"
-        },
-        {
-            name: "Saskatchewan ISW - Occupation In-Demand",
-            description: "Competitive if your NOC is on their specific list.",
-            eligibilityScore: 65,
-            timeline: "12-15 Months",
-            type: "Provincial"
-        },
-        {
-            name: "Start-up Visa Program",
-            description: "Requires designated organization support and innovative business.",
-            eligibilityScore: 10,
-            timeline: "12-16 Months",
-            type: "Business"
-        },
-        {
-             name: "Manitoba Skilled Worker Overseas",
-             description: "Requires connection to Manitoba (friend/family/education).",
-             eligibilityScore: 30,
-             timeline: "12+ Months",
-             type: "Provincial"
+          programName: "Computer Systems Technician",
+          institution: "Seneca Polytechnic",
+          location: "Toronto, ON",
+          tuition: "$18,000 CAD/year",
+          matchReason: "Aligned with your interest in IT and budget.",
         }
       ],
-      strategicAdvice: "Your CRS score of 445 is competitive for Provincial Nominee Programs (PNPs) but low for general Federal draws. Focus on OINP Human Capital stream or secure a job offer to unlock BC PNP or direct points.",
-      studyRecommendations: [],
     };
   }
 };
