@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { AIAnalysisResult } from '../types';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
-import { Check, AlertTriangle, GraduationCap, TrendingUp, List, CheckCircle2, XCircle, HelpCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { Check, AlertTriangle, GraduationCap, TrendingUp, List, CheckCircle2, XCircle, ArrowRight, Sparkles, ArrowRightCircle, Info } from 'lucide-react';
 
 interface UserDashboardProps {
   results: AIAnalysisResult;
@@ -38,12 +39,15 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
       return { label: "Not Eligible", icon: <XCircle size={16} className="text-red-500" /> };
   };
 
+  // Helper to calculate percentage relative to max possible CRS (approx 600 core, 1200 total, usually 500-600 is target range)
+  const getBarWidth = (score: number) => `${Math.min((score / 600) * 100, 100)}%`;
+
   return (
     <div className="max-w-6xl mx-auto pb-12">
       {/* Header Section */}
       <div className="mb-8 text-center md:text-left">
         <h1 className="text-3xl font-bold text-gray-900">Your Immigration Assessment</h1>
-        <p className="text-gray-600 mt-2">Powered by MaplePath AI Engine</p>
+        <p className="text-gray-600 mt-2">Powered by ImmiPlanner AI Engine</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -54,7 +58,7 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <TrendingUp className="text-red-600" size={20}/>
-              Success Probability
+              Visa Approval Probability
             </h3>
             <div className="h-48 w-full relative flex justify-center items-center">
               <ResponsiveContainer width="100%" height="100%">
@@ -87,18 +91,93 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
             </p>
           </div>
 
-          {/* CRS Prediction */}
+          {/* CRS Prediction Card (Dynamic based on Student vs Worker) */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-             <h3 className="text-lg font-semibold text-gray-800 mb-2">CRS Prediction</h3>
-             <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-bold text-blue-600">{results.crsScorePrediction}</span>
-                <span className="text-sm text-gray-500">points</span>
-             </div>
-             <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
-                <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${Math.min((results.crsScorePrediction / 600) * 100, 100)}%` }}></div>
-             </div>
-             <p className="text-xs text-gray-500 mt-2">Current cut-off trends hover around 480-520 for general draws.</p>
+             <h3 className="text-lg font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <List size={18} className="text-blue-600"/>
+                CRS Score Projection
+             </h3>
+             
+             {results.futureCrsPredictions ? (
+                 <div className="space-y-5 mt-4">
+                     {/* Current */}
+                     <div>
+                         <div className="flex justify-between text-sm mb-1">
+                             <span className="font-medium text-gray-500">Current Score (As of Today)</span>
+                             <span className="font-bold text-gray-900">{results.futureCrsPredictions.current}</span>
+                         </div>
+                         <div className="w-full bg-gray-100 rounded-full h-2">
+                             <div className="bg-gray-400 h-2 rounded-full transition-all duration-500" style={{ width: getBarWidth(results.futureCrsPredictions.current) }}></div>
+                         </div>
+                     </div>
+
+                     {/* Option 1 */}
+                     <div>
+                         <div className="flex justify-between text-sm mb-1">
+                             <span className="text-gray-600 text-xs">Option 1: After 1 Year Study</span>
+                             <span className="font-bold text-blue-600">{results.futureCrsPredictions.oneYearStudy}</span>
+                         </div>
+                         <div className="w-full bg-blue-50 rounded-full h-2">
+                             <div className="bg-blue-400 h-2 rounded-full transition-all duration-500" style={{ width: getBarWidth(results.futureCrsPredictions.oneYearStudy) }}></div>
+                         </div>
+                     </div>
+
+                     {/* Option 2 */}
+                     <div>
+                         <div className="flex justify-between text-sm mb-1">
+                             <span className="text-gray-600 text-xs">Option 2: After 2 Years Study</span>
+                             <span className="font-bold text-blue-600">{results.futureCrsPredictions.twoYearStudy}</span>
+                         </div>
+                         <div className="w-full bg-blue-50 rounded-full h-2">
+                             <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: getBarWidth(results.futureCrsPredictions.twoYearStudy) }}></div>
+                         </div>
+                     </div>
+
+                     {/* Option 3 (Highlight) */}
+                     <div className="bg-green-50 p-3 rounded-lg border border-green-100 -mx-2">
+                         <div className="flex justify-between text-sm mb-1">
+                             <span className="font-bold text-green-800 text-xs flex items-center gap-1">
+                                 Option 3: 2 Yr Study + 1 Yr Work <ArrowRight size={12}/>
+                             </span>
+                             <span className="font-extrabold text-green-700 text-lg">{results.futureCrsPredictions.twoYearStudyPlusWork}</span>
+                         </div>
+                         <div className="w-full bg-green-200 rounded-full h-2.5">
+                             <div className="bg-green-600 h-2.5 rounded-full transition-all duration-500" style={{ width: getBarWidth(results.futureCrsPredictions.twoYearStudyPlusWork) }}></div>
+                         </div>
+                         <p className="text-[10px] text-green-700 mt-1 text-right font-medium">Highest PR Probability</p>
+                     </div>
+                 </div>
+             ) : (
+                 /* Fallback / Standard Worker View */
+                 <>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold text-blue-600">{results.crsScorePrediction}</span>
+                        <span className="text-sm text-gray-500">points</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+                        <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${Math.min((results.crsScorePrediction / 600) * 100, 100)}%` }}></div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">Current cut-off trends hover around 480-520 for general draws.</p>
+                 </>
+             )}
           </div>
+
+          {/* Assumptions Section (New) */}
+          {results.assumptions && results.assumptions.length > 0 && (
+             <div className="bg-yellow-50 rounded-xl shadow-sm border border-yellow-100 p-6">
+                <h3 className="text-sm font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                   <Info size={16}/> Analysis Assumptions
+                </h3>
+                <ul className="space-y-1">
+                   {results.assumptions.map((note, idx) => (
+                      <li key={idx} className="text-xs text-yellow-700 flex items-start gap-2">
+                         <span className="mt-1.5 w-1 h-1 rounded-full bg-yellow-500 shrink-0"></span>
+                         {note}
+                      </li>
+                   ))}
+                </ul>
+             </div>
+          )}
 
           {/* Call to Action */}
           <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
@@ -120,9 +199,24 @@ export const UserDashboard: React.FC<UserDashboardProps> = ({ results, onBookCon
           
           {/* Strategic Advice */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">AI Strategic Advice</h3>
-            <div className="p-4 bg-blue-50 text-blue-900 rounded-lg text-sm leading-relaxed border border-blue-100">
-              {results.strategicAdvice}
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Sparkles className="text-amber-500" size={20} /> AI Strategic Advice
+            </h3>
+            <div className="space-y-3">
+              {Array.isArray(results.strategicAdvice) && results.strategicAdvice.length > 0 ? (
+                  <ul className="space-y-3">
+                      {results.strategicAdvice.map((advice, idx) => (
+                          <li key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors">
+                              <span className="mt-1 text-blue-500 shrink-0">
+                                  <ArrowRightCircle size={16} />
+                              </span>
+                              <span className="text-sm text-gray-800 leading-relaxed font-medium">{advice}</span>
+                          </li>
+                      ))}
+                  </ul>
+              ) : (
+                  <p className="text-sm text-gray-600">{results.strategicAdvice}</p>
+              )}
             </div>
           </div>
 

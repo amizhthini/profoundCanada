@@ -95,9 +95,18 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
         reading: 0,
         writing: 0,
         listening: 0,
-        speaking: 0
+        speaking: 0,
+        overallScore: 0
     },
     hasFrench: false,
+    frenchDetails: {
+        testType: 'None',
+        reading: 0,
+        writing: 0,
+        listening: 0,
+        speaking: 0,
+        overallScore: 0
+    },
 
     certificateOfQualification: false,
     targetProvince: 'Ontario',
@@ -123,7 +132,8 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             reading: 0,
             writing: 0,
             listening: 0,
-            speaking: 0
+            speaking: 0,
+            overallScore: 0
         }
     }
   });
@@ -147,11 +157,12 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
       });
   };
 
-  const handleLanguageChange = (field: string, value: any) => {
+  const handleLanguageChange = (lang: 'english' | 'french', field: string, value: any) => {
+      const targetField = lang === 'english' ? 'languageDetails' : 'frenchDetails';
       setFormData(prev => ({
           ...prev,
-          languageDetails: {
-              ...prev.languageDetails,
+          [targetField]: {
+              ...(prev as any)[targetField],
               [field]: field === 'testType' ? value : Number(value)
           }
       }));
@@ -323,7 +334,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                         </div>
                     </div>
                 )}
-                 {/* (Steps 2-5 for Student retained as previously implemented...) */}
+                
                 {step === 2 && (
                     <div className="animate-fade-in divide-y divide-gray-100">
                         <div className="p-6 bg-blue-50 border-b border-blue-100 mb-0">
@@ -347,26 +358,40 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                         </FormRow>
                     </div>
                 )}
+                
                 {step === 3 && (
                     <div className="animate-fade-in divide-y divide-gray-100">
                          <div className="p-6 bg-gray-50 border-b border-gray-100">
                              <h3 className="text-lg font-bold text-gray-900">Language Proficiency</h3>
                         </div>
-                        <FormRow label="Language Test" subLabel="Have you taken an official test?">
+                        
+                        {/* English */}
+                        <FormRow label="English Test" subLabel="Have you taken an official test?">
                             <select 
                                 value={formData.languageDetails.testType} 
-                                onChange={(e) => handleLanguageChange('testType', e.target.value)} 
+                                onChange={(e) => handleLanguageChange('english', 'testType', e.target.value)} 
                                 className="input-field"
                             >
                                 <option value="None">No, not yet</option>
                                 <option value="IELTS">IELTS Academic</option>
+                                <option value="IELTS-General">IELTS General</option>
                                 <option value="PTE Core">PTE Academic</option>
                                 <option value="TOEFL">TOEFL</option>
                                 <option value="Duolingo">Duolingo</option>
                             </select>
                         </FormRow>
                         {formData.languageDetails.testType !== 'None' && (
-                             <FormRow label="Test Scores" subLabel="Enter your band scores for each section.">
+                             <FormRow label="English Scores" subLabel="Enter your Overall and individual band scores.">
+                                 <div className="grid grid-cols-1 mb-3">
+                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Overall Score</label>
+                                     <input 
+                                        type="number" 
+                                        step="0.5" 
+                                        value={formData.languageDetails.overallScore || 0} 
+                                        onChange={(e) => handleLanguageChange('english', 'overallScore', e.target.value)} 
+                                        className="input-field text-center font-mono font-bold border-blue-300 bg-blue-50" 
+                                     />
+                                 </div>
                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                      {['Reading', 'Writing', 'Listening', 'Speaking'].map((skill) => (
                                          <div key={skill}>
@@ -375,7 +400,48 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                                                 type="number" 
                                                 step="0.5" 
                                                 value={(formData.languageDetails as any)[skill.toLowerCase()]} 
-                                                onChange={(e) => handleLanguageChange(skill.toLowerCase(), e.target.value)} 
+                                                onChange={(e) => handleLanguageChange('english', skill.toLowerCase(), e.target.value)} 
+                                                className="input-field text-center font-mono" 
+                                             />
+                                         </div>
+                                     ))}
+                                 </div>
+                             </FormRow>
+                        )}
+
+                        {/* French */}
+                         <FormRow label="French Test" subLabel="TEF Canada or TCF Canada?">
+                            <select 
+                                value={formData.frenchDetails?.testType || 'None'} 
+                                onChange={(e) => handleLanguageChange('french', 'testType', e.target.value)} 
+                                className="input-field"
+                            >
+                                <option value="None">None</option>
+                                <option value="TEF Canada">TEF Canada</option>
+                                <option value="TCF Canada">TCF Canada</option>
+                            </select>
+                        </FormRow>
+                        {formData.frenchDetails && formData.frenchDetails.testType !== 'None' && (
+                             <FormRow label="French Scores" subLabel="Enter your scores.">
+                                 <div className="grid grid-cols-1 mb-3">
+                                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Overall Score</label>
+                                     <input 
+                                        type="number" 
+                                        step="0.5" 
+                                        value={formData.frenchDetails.overallScore || 0} 
+                                        onChange={(e) => handleLanguageChange('french', 'overallScore', e.target.value)} 
+                                        className="input-field text-center font-mono font-bold" 
+                                     />
+                                 </div>
+                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                     {['Reading', 'Writing', 'Listening', 'Speaking'].map((skill) => (
+                                         <div key={skill}>
+                                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">{skill}</label>
+                                             <input 
+                                                type="number" 
+                                                step="0.5" 
+                                                value={(formData.frenchDetails as any)[skill.toLowerCase()]} 
+                                                onChange={(e) => handleLanguageChange('french', skill.toLowerCase(), e.target.value)} 
                                                 className="input-field text-center font-mono" 
                                              />
                                          </div>
@@ -385,6 +451,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                         )}
                     </div>
                 )}
+
                 {step === 4 && (
                      <div className="animate-fade-in divide-y divide-gray-100">
                         <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -470,7 +537,6 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
   }
 
   // --- WORKER / DIRECT PR FLOW ---
-  // 7 Steps grouping the 10 logic points
   const workerSteps = 7;
 
   return (
@@ -496,7 +562,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
 
       <div className="p-0">
         
-        {/* STEP 1: Stream, Resume & Basic Bio (Q0, Q1, Q2, Q3) */}
+        {/* STEP 1: Stream, Resume & Basic Bio */}
         {step === 1 && (
             <div className="animate-fade-in">
                 <div className="p-6 pb-0">
@@ -560,7 +626,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             </div>
         )}
 
-        {/* STEP 2: Work Experience (Q4, Q4.1, Q4.2, Q4.3) */}
+        {/* STEP 2: Work Experience */}
         {step === 2 && (
             <div className="animate-fade-in divide-y divide-gray-100">
                  <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -598,7 +664,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             </div>
         )}
 
-        {/* STEP 3: Education (Q5, Q6) */}
+        {/* STEP 3: Education */}
         {step === 3 && (
             <div className="animate-fade-in divide-y divide-gray-100">
                  <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -632,7 +698,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             </div>
         )}
 
-        {/* STEP 4: Language (Q7, Q8) */}
+        {/* STEP 4: Language */}
         {step === 4 && (
             <div className="animate-fade-in divide-y divide-gray-100">
                  <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -644,7 +710,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                  <FormRow label="English Test" required>
                      <select 
                         value={formData.languageDetails.testType} 
-                        onChange={(e) => handleLanguageChange('testType', e.target.value)} 
+                        onChange={(e) => handleLanguageChange('english', 'testType', e.target.value)} 
                         className="input-field"
                      >
                          <option value="None">No Test Taken</option>
@@ -655,7 +721,17 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                  </FormRow>
 
                  {formData.languageDetails.testType !== 'None' && (
-                     <FormRow label="English Scores" subLabel="Reading / Writing / Listening / Speaking">
+                     <FormRow label="English Scores" subLabel="Overall & Sectional">
+                         <div className="grid grid-cols-1 mb-3">
+                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Overall Score</label>
+                             <input 
+                                type="number" 
+                                step="0.5" 
+                                value={formData.languageDetails.overallScore || 0} 
+                                onChange={(e) => handleLanguageChange('english', 'overallScore', e.target.value)} 
+                                className="input-field text-center font-mono font-bold bg-gray-50" 
+                             />
+                         </div>
                          <div className="grid grid-cols-4 gap-2">
                             {['Reading', 'Writing', 'Listening', 'Speaking'].map((skill) => (
                                  <input 
@@ -664,7 +740,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                                     step="0.5" 
                                     placeholder={skill.charAt(0)}
                                     value={(formData.languageDetails as any)[skill.toLowerCase()]} 
-                                    onChange={(e) => handleLanguageChange(skill.toLowerCase(), e.target.value)} 
+                                    onChange={(e) => handleLanguageChange('english', skill.toLowerCase(), e.target.value)} 
                                     className="input-field text-center px-1" 
                                  />
                              ))}
@@ -673,16 +749,49 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                  )}
 
                  {/* Q8: French */}
-                 <FormRow label="French Test?" subLabel="Have you taken TEF or TCF Canada?">
-                     <div className="grid grid-cols-2 gap-4">
-                        <SelectionCard selected={formData.hasFrench === true} onClick={() => setFormData({...formData, hasFrench: true})} label="Yes" />
-                        <SelectionCard selected={formData.hasFrench === false} onClick={() => setFormData({...formData, hasFrench: false})} label="No" />
-                     </div>
+                 <FormRow label="French Test" subLabel="Have you taken TEF or TCF Canada?">
+                    <select 
+                        value={formData.frenchDetails?.testType || 'None'} 
+                        onChange={(e) => handleLanguageChange('french', 'testType', e.target.value)} 
+                        className="input-field"
+                    >
+                        <option value="None">None</option>
+                        <option value="TEF Canada">TEF Canada</option>
+                        <option value="TCF Canada">TCF Canada</option>
+                    </select>
                  </FormRow>
+
+                 {formData.frenchDetails && formData.frenchDetails.testType !== 'None' && (
+                     <FormRow label="French Scores" subLabel="Enter your scores.">
+                         <div className="grid grid-cols-1 mb-3">
+                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Overall Score</label>
+                             <input 
+                                type="number" 
+                                step="0.5" 
+                                value={formData.frenchDetails.overallScore || 0} 
+                                onChange={(e) => handleLanguageChange('french', 'overallScore', e.target.value)} 
+                                className="input-field text-center font-mono font-bold" 
+                             />
+                         </div>
+                         <div className="grid grid-cols-4 gap-2">
+                             {['Reading', 'Writing', 'Listening', 'Speaking'].map((skill) => (
+                                 <input 
+                                    key={skill}
+                                    type="number" 
+                                    step="0.5" 
+                                    placeholder={skill.charAt(0)}
+                                    value={(formData.frenchDetails as any)[skill.toLowerCase()]} 
+                                    onChange={(e) => handleLanguageChange('french', skill.toLowerCase(), e.target.value)} 
+                                    className="input-field text-center px-1" 
+                                 />
+                             ))}
+                         </div>
+                     </FormRow>
+                 )}
             </div>
         )}
 
-        {/* STEP 5: Funds & Job (Q9, Q10) */}
+        {/* STEP 5: Funds & Job */}
         {step === 5 && (
             <div className="animate-fade-in divide-y divide-gray-100">
                  <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -715,7 +824,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             </div>
         )}
 
-        {/* STEP 6: History & Family (Q11, Q12, Q13) */}
+        {/* STEP 6: History & Family */}
         {step === 6 && (
             <div className="animate-fade-in divide-y divide-gray-100">
                  <div className="p-6 bg-gray-50 border-b border-gray-100">
@@ -730,7 +839,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
                      </div>
                  </FormRow>
 
-                 {/* Q12: Work History - Covered in Step 2, but asking specifically for current status */}
+                 {/* Q12: Work History */}
                  <FormRow label="Worked in Canada?" subLabel="At least 1 year skilled?">
                      <div className="grid grid-cols-2 gap-4">
                         <SelectionCard selected={formData.canadianWorkExperience !== 'None'} onClick={() => setFormData({...formData, canadianWorkExperience: '1'})} label="Yes" />
@@ -754,7 +863,7 @@ export const AssessmentForm: React.FC<AssessmentFormProps> = ({ userType, onSubm
             </div>
         )}
 
-        {/* STEP 7: Province Preference (Q14) */}
+        {/* STEP 7: Province Preference */}
         {step === 7 && (
              <div className="animate-fade-in divide-y divide-gray-100">
                 <div className="p-6 bg-gray-50 border-b border-gray-100">

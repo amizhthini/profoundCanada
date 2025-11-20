@@ -12,6 +12,7 @@ export interface LanguageScores {
   listening: number;
   reading: number;
   writing: number;
+  overallScore?: number; // New: Overall Band Score
 }
 
 export interface SpouseProfile {
@@ -60,7 +61,8 @@ export interface UserProfile {
   // Language
   englishScore: number; // General Band (Legacy/Fallback)
   languageDetails: LanguageScores;
-  hasFrench?: boolean; // New
+  hasFrench?: boolean; // Keep for simple check logic
+  frenchDetails?: LanguageScores; // New: Detailed French scores
   secondLanguageDetails?: LanguageScores;
 
   // Additional Factors
@@ -92,14 +94,23 @@ export interface Pathway {
   type: 'Federal' | 'Provincial' | 'Study' | 'Business' | 'Family';
 }
 
+export interface CrsProjections {
+  current: number;
+  oneYearStudy: number; // Option 1
+  twoYearStudy: number; // Option 2
+  twoYearStudyPlusWork: number; // Option 3 (Highest)
+}
+
 export interface AIAnalysisResult {
   overallSuccessProbability: number; // 0-100
   crsScorePrediction: number;
+  futureCrsPredictions?: CrsProjections; // New: For Student future scenarios
   riskFactors: string[];
   strengths: string[];
+  assumptions?: string[]; // New: List of assumptions made during calculation
   recommendedPathways: Pathway[];
   otherPathways: Pathway[]; // Pathways evaluated but not top recommended
-  strategicAdvice: string;
+  strategicAdvice: string[]; // Changed to array for bullet points
   studyRecommendations?: {
     programName: string;
     institution: string;

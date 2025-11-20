@@ -100,41 +100,39 @@ export const analyzeProfile = async (
   if (userType === UserType.Student) {
       specificInstructions = `
       CONTEXT: USER IS A PROSPECTIVE INTERNATIONAL STUDENT.
-      1. Analyze Visa Approval Probability based on:
-         - Financials (Savings vs Tuition/Living expenses).
-         - Study Gap (Age vs Education Level).
-         - Dual Intent (Genuine Student Check).
-         - Country of Residence (High vs Low risk visa offices).
-      2. SIMULATE "ApplyBoard" API Course Matching:
-         - Recommend 3-4 real Canadian DLI (Designated Learning Institutions) programs.
-         - Match based on 'intendedStudyField', 'educationLevel', and 'grades'.
-         - If user has Bachelor's, suggest Post-Grad or Master's.
-         - If user has High School, suggest Diploma or Bachelor's.
+      1. Analyze Visa Approval Probability based on financial, study gap, and intent.
+      2. SIMULATE "ApplyBoard" API Course Matching (3-4 DLIs).
+      3. CALCULATE FUTURE CRS SCENARIOS (Permanent Residency Eligibility):
+         - **Current**: Calculate CRS based on profile NOW. 
+         - **Option 1 (1 Year Study)**: Add points for a 1-year Canadian credential.
+         - **Option 2 (2 Year Study)**: Add points for a 2-year Canadian credential (higher chance).
+         - **Option 3 (2 Year Study + 1 Year Work)**: Add points for 2-year Canadian credential + 1 year Canadian work experience (CEC eligibility).
       `;
   } else {
       specificInstructions = `
       CONTEXT: USER IS A SKILLED WORKER SEEKING PR.
       REFERENCE "MASTER CHEAT SHEET 2025":
         1. Federal Express Entry (CEC, FSWP, FSTP, Category-Based).
-        2. PNP Streams (OINP, BC PNP, AAIP, SINP, MPNP, Atlantic).
-        3. Pilots (Agri-Food, RNIP, Caregiver).
+        2. PNP Streams.
       
       User Specifics:
-      - Immigration Category Preference: ${profile.immigrationCategory}
-      - Has ECA: ${profile.hasEca ? "Yes" : "No"}
-      - French Skills: ${profile.hasFrench ? "Yes" : "No"}
-      - Parents in Canada: ${profile.parentsInCanada ? "Yes" : "No"}
-      - Job Role: ${profile.jobRole}
-      
-      Strictly return the top 3 recommended pathways and a list of other pathways evaluated.
+      - Category: ${profile.immigrationCategory}
+      - ECA: ${profile.hasEca}
+      - Job Offer: ${profile.hasJobOffer} (TEER: ${profile.jobOfferTeer || 'N/A'})
       `;
   }
 
-  // Constructing detailed prompt
-  let languageInfo = "N/A";
+  // Language string construction
+  let englishInfo = "N/A";
   if (profile.languageDetails) {
-      const { testType, reading, writing, listening, speaking } = profile.languageDetails;
-      languageInfo = `${testType} - R:${reading}, W:${writing}, L:${listening}, S:${speaking}`;
+      const { testType, reading, writing, listening, speaking, overallScore } = profile.languageDetails;
+      englishInfo = `${testType} - Overall:${overallScore}, R:${reading}, W:${writing}, L:${listening}, S:${speaking}`;
+  }
+  
+  let frenchInfo = "None";
+  if (profile.frenchDetails && profile.frenchDetails.testType !== 'None') {
+      const { testType, reading, writing, listening, speaking, overallScore } = profile.frenchDetails;
+      frenchInfo = `${testType} - Overall:${overallScore}, R:${reading}, W:${writing}, L:${listening}, S:${speaking}`;
   }
 
   const commonPrompt = `
@@ -142,54 +140,52 @@ export const analyzeProfile = async (
     - Name: ${profile.name}
     - Age: ${profile.age}
     - Country: ${profile.countryOfResidence}
-    - Marital Status: ${profile.maritalStatus}
-    - Education: ${profile.educationLevel} (Canadian Degree: ${profile.hasCanadianEducation})
-    - Current Field: ${profile.fieldOfStudy}
-    - Intended Study Field: ${profile.intendedStudyField}
-    - Grades/GPA: ${profile.gradesOrGpa || "Not provided"}
-    - Work Experience: ${profile.workExperienceYears} years (Location: ${profile.workExperienceLocation || 'N/A'})
-    - Language Results: ${languageInfo}
-    - Savings: ${profile.savingsExempt ? "Exempt (Job Offer)" : `$${profile.savings} CAD`}
-    - Visa History: ${profile.hasVisaHistory ? "Previous Travel to Canada" : "None"}
-    - Refusals/Criminal/Medical Issues: ${profile.hasRefusalHistory || profile.hasCriminalRecord || profile.hasMedicalCondition ? "YES (Risk Factor)" : "None"}
-    - Preferred Provinces: ${profile.preferredProvinces?.join(', ')}
+    - Education: ${profile.educationLevel} (Canadian: ${profile.hasCanadianEducation})
+    - Work: ${profile.workExperienceYears} years
+    - English Language: ${englishInfo}
+    - French Language: ${frenchInfo}
+    - Savings: ${profile.savings}
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `
-        You are an expert Canadian Immigration and Education Consultant AI.
+        You are an expert Canadian Immigration AI.
         ${specificInstructions}
         
         ${commonPrompt}
 
-        OUTPUT REQUIREMENTS:
-        Return JSON matching the schema.
-        For Students: 'recommendedPathways' should be generic visa pathways (e.g. "Study Permit (SDS)", "Study Permit (General)"), and 'studyRecommendations' must be populated.
-        For Workers: 'studyRecommendations' can be empty.
+        **CRITICAL CRS CALCULATION RULES & ASSUMPTIONS:**
+        1. **IELTS Academic**: If the user provided "IELTS Academic" scores, for the purpose of CRS estimation, assume they are equivalent to "IELTS General" scores (same CLB level). Note this in the "assumptions" output.
+        2. **No English Test (Student)**: If the user is a Student and has 'None' for English test, assume they have at least CLB 5 (approx IELTS 5.0) for the "Current" CRS calculation (as they would need this for admission). Note this in the "assumptions" output.
+        3. **No English Test (Worker)**: If a Worker has 'None', assume 0 points for language unless stated otherwise.
+
+        OUTPUT JSON SCHEMA.
+        Ensure 'strategicAdvice' is returned as an ARRAY of strings (bullet points).
+        Include 'assumptions' as an ARRAY of strings listing any assumptions made during calculation.
       `,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            overallSuccessProbability: {
-              type: Type.NUMBER,
-              description: "0-100 score indicating likelihood of Visa/PR approval.",
+            overallSuccessProbability: { type: Type.NUMBER },
+            crsScorePrediction: { type: Type.NUMBER },
+            futureCrsPredictions: {
+               type: Type.OBJECT,
+               description: "Only for students. Project scores for 3 scenarios.",
+               properties: {
+                   current: { type: Type.NUMBER },
+                   oneYearStudy: { type: Type.NUMBER },
+                   twoYearStudy: { type: Type.NUMBER },
+                   twoYearStudyPlusWork: { type: Type.NUMBER }
+               },
+               required: ["current", "oneYearStudy", "twoYearStudy", "twoYearStudyPlusWork"]
             },
-            crsScorePrediction: {
-              type: Type.NUMBER,
-              description: "Estimated CRS score (if applicable, else 0).",
-            },
-            riskFactors: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            strengths: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
+            riskFactors: { type: Type.ARRAY, items: { type: Type.STRING } },
+            strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+            assumptions: { type: Type.ARRAY, items: { type: Type.STRING }, description: "List of assumptions made (e.g. IELTS Academic treated as General)" },
             recommendedPathways: {
               type: Type.ARRAY,
               items: {
@@ -216,8 +212,10 @@ export const analyzeProfile = async (
                  },
                },
             },
-            strategicAdvice: {
-              type: Type.STRING,
+            strategicAdvice: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: "List of specific, actionable strategic advice points."
             },
             studyRecommendations: {
               type: Type.ARRAY,
@@ -238,6 +236,7 @@ export const analyzeProfile = async (
             "crsScorePrediction",
             "riskFactors",
             "strengths",
+            "assumptions",
             "recommendedPathways",
             "otherPathways",
             "strategicAdvice",
@@ -249,35 +248,38 @@ export const analyzeProfile = async (
     if (response.text) {
       return JSON.parse(response.text) as AIAnalysisResult;
     }
-    throw new Error("No response from AI");
+    throw new Error("No response");
   } catch (error) {
     console.error("Error analyzing profile:", error);
-    // Fallback mock data
+    // Fallback
     return {
       overallSuccessProbability: 75,
-      crsScorePrediction: 0,
-      riskFactors: ["Study gap of >3 years", "High competition for this program"],
-      strengths: ["Sufficient financial funds", "Good language score"],
+      crsScorePrediction: 320,
+      futureCrsPredictions: {
+          current: 320,
+          oneYearStudy: 345,
+          twoYearStudy: 360,
+          twoYearStudyPlusWork: 475
+      },
+      riskFactors: ["Study gap"],
+      strengths: ["Funds available"],
+      assumptions: ["Assumed IELTS 5.0 for baseline calculation due to missing scores."],
       recommendedPathways: [
         {
-          name: "Study Permit (SDS Stream)",
-          description: "Fast-track processing for residents of specific countries with IELTS 6.0+.",
-          eligibilityScore: 90,
-          timeline: "20 Days",
+          name: "Study Permit",
+          description: "Standard study pathway.",
+          eligibilityScore: 85,
+          timeline: "3 Months",
           type: "Study",
         }
       ],
       otherPathways: [],
-      strategicAdvice: "Focus on writing a strong Statement of Purpose (SOP) explaining the study gap.",
-      studyRecommendations: [
-        {
-          programName: "Computer Systems Technician",
-          institution: "Seneca Polytechnic",
-          location: "Toronto, ON",
-          tuition: "$18,000 CAD/year",
-          matchReason: "Aligned with your interest in IT and budget.",
-        }
+      strategicAdvice: [
+        "Improve IELTS Listening score to 8.0 to maximize CLB points.",
+        "Consider one-year PG diploma to gain Canadian experience.",
+        "Apply for PNP in Saskatchewan or Manitoba for lower CRS cutoffs."
       ],
+      studyRecommendations: [],
     };
   }
 };

@@ -16,7 +16,7 @@ export const Navbar: React.FC<NavbarProps> = ({ userType, onLogout, onSwitchView
           <div className="bg-red-600 p-1.5 rounded-lg">
             <Map className="h-6 w-6 text-white" />
           </div>
-          <span className="self-center text-2xl font-bold whitespace-nowrap text-gray-900">MaplePath AI</span>
+          <span className="self-center text-2xl font-bold whitespace-nowrap text-gray-900">ImmiPlanner AI</span>
         </div>
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
           {userType ? (
